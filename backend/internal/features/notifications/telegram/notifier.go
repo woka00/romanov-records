@@ -14,23 +14,52 @@ import (
 	"time"
 )
 
-const apiBase = "https://api.telegram.org/bot"
+const defaultAPIBase = "https://api.telegram.org/bot"
 
 type Notifier struct {
-	token   string
-	chatIDs []int64
-	client  *http.Client
+	token       string
+	chatIDs     []int64
+	client      *http.Client
+	apiBase     string
+	relaySecret string
 }
 
 // New creates a Telegram notifier. If token or chatIDs is empty, the notifier
 // becomes a no-op — calls succeed silently. This lets the rest of the system
 // run without Telegram configured (e.g. in local dev).
 func New(token string, chatIDs []int64) *Notifier {
+	return NewWithAPIBase(token, chatIDs, "")
+}
+
+// NewWithAPIBase creates a notifier that can use a Telegram-compatible relay.
+// rawAPIBase may be either https://api.telegram.org, https://api.telegram.org/bot,
+// or a Worker URL that forwards /bot... requests to Telegram.
+func NewWithAPIBase(token string, chatIDs []int64, rawAPIBase string) *Notifier {
+	return NewWithAPIBaseAndRelaySecret(token, chatIDs, rawAPIBase, "")
+}
+
+// NewWithAPIBaseAndRelaySecret also sends a shared secret header for relays
+// that protect themselves from public use.
+func NewWithAPIBaseAndRelaySecret(token string, chatIDs []int64, rawAPIBase string, relaySecret string) *Notifier {
 	return &Notifier{
-		token:   token,
-		chatIDs: chatIDs,
-		client:  &http.Client{Timeout: 10 * time.Second},
+		token:       token,
+		chatIDs:     chatIDs,
+		client:      &http.Client{Timeout: 10 * time.Second},
+		apiBase:     normalizeAPIBase(rawAPIBase),
+		relaySecret: strings.TrimSpace(relaySecret),
 	}
+}
+
+func normalizeAPIBase(raw string) string {
+	raw = strings.TrimSpace(raw)
+	if raw == "" {
+		return defaultAPIBase
+	}
+	raw = strings.TrimRight(raw, "/")
+	if !strings.HasSuffix(raw, "/bot") {
+		raw += "/bot"
+	}
+	return raw
 }
 
 // ParseChatIDs parses a comma-separated list of int64 chat IDs.
@@ -88,12 +117,15 @@ func (n *Notifier) send(ctx context.Context, chatID int64, text string) error {
 		return fmt.Errorf("marshal: %w", err)
 	}
 
-	url := apiBase + n.token + "/sendMessage"
+	url := n.apiBase + n.token + "/sendMessage"
 	req, err := http.NewRequestWithContext(ctx, http.MethodPost, url, bytes.NewReader(payload))
 	if err != nil {
 		return fmt.Errorf("build request: %w", err)
 	}
 	req.Header.Set("Content-Type", "application/json")
+	if n.relaySecret != "" {
+		req.Header.Set("X-Romanov-Relay-Secret", n.relaySecret)
+	}
 
 	resp, err := n.client.Do(req)
 	if err != nil {

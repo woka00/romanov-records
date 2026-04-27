@@ -46,11 +46,16 @@ func main() {
 
 	tgToken := os.Getenv("TELEGRAM_BOT_TOKEN")
 	tgChatIDs := telegram_notifier.ParseChatIDs(os.Getenv("TELEGRAM_NOTIFY_CHAT_IDS"))
-	tgNotifier := telegram_notifier.New(tgToken, tgChatIDs)
+	tgAPIBase := os.Getenv("TELEGRAM_API_BASE_URL")
+	tgRelaySecret := os.Getenv("TELEGRAM_RELAY_SECRET")
+	tgNotifier := telegram_notifier.NewWithAPIBaseAndRelaySecret(tgToken, tgChatIDs, tgAPIBase, tgRelaySecret)
 	if tgToken == "" || len(tgChatIDs) == 0 {
 		log.Println("telegram: notifier disabled (TELEGRAM_BOT_TOKEN or TELEGRAM_NOTIFY_CHAT_IDS not set)")
 	} else {
 		log.Printf("telegram: notifier ready, %d chat(s) configured", len(tgChatIDs))
+		if tgAPIBase != "" {
+			log.Printf("telegram: using custom API base %s", tgAPIBase)
+		}
 	}
 
 	bookingRepo := bookings_repository.NewPostgresRepository(conn)
