@@ -1,0 +1,26 @@
+# Секреты и окружение
+.env
+.env.*
+cookies.txt
+
+# Docker и инфраструктура
+Dockerfile
+docker-compose.yaml
+Makefile
+
+# Git
+.git
+.gitignore
+
+# Документация
+README.md
+*.md
+
+# IDE
+.idea/
+.vscode/
+*.iml
+
+# Временные файлы
+*.log
+tmp/
