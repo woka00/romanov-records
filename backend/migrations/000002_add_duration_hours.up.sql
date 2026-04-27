@@ -1,0 +1,2 @@
+ALTER TABLE romanov.bookings
+    ADD COLUMN IF NOT EXISTS duration_hours INTEGER NOT NULL DEFAULT 1;

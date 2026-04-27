@@ -1,0 +1,35 @@
+# Зависимости (устанавливаются внутри образа)
+node_modules/
+
+# Артефакт сборки (пересобирается внутри)
+.next/
+
+# Секреты и окружение
+.env
+.env.*
+.env.local
+.env.*.local
+
+# Docker и инфраструктура
+Dockerfile
+.dockerignore
+
+# Git
+.git
+.gitignore
+
+# Документация
+README.md
+*.md
+
+# IDE
+.idea/
+.vscode/
+
+# Отладка и dev-инструменты
+*.log
+npm-debug.log*
+tsconfig.tsbuildinfo
+
+# TypeScript build info
+*.tsbuildinfo
