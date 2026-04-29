@@ -1,12 +1,11 @@
 // ROMANOV RECORDS — main page
-// Section order: Hero → Tariffs → Equipment → Location+Contacts → Comfort
-// No WaveDividers — sections flow as one continuous tape on a shared dot-grid background
+// Section order: Hero → Comfort → Equipment → Tariffs → Location+Contacts
 import Nav from "@/components/Nav";
 import Hero from "@/components/Hero";
-import Tariffs from "@/components/Tariffs";
-import Equipment from "@/components/Equipment";
-import Location from "@/components/Location";
 import Comfort from "@/components/Comfort";
+import Equipment from "@/components/Equipment";
+import Tariffs from "@/components/Tariffs";
+import Location from "@/components/Location";
 
 export default function Home() {
   return (
@@ -14,10 +13,10 @@ export default function Home() {
       <Nav />
       <main>
         <Hero />
-        <Tariffs />
-        <Equipment />
-        <Location />
         <Comfort />
+        <Equipment />
+        <Tariffs />
+        <Location />
       </main>
     </>
   );

@@ -12,7 +12,11 @@ export const metadata: Metadata = {
   description:
     "Профессиональная студия звукозаписи. Москва, ул. Тимура Фрунзе 16, 5 минут от метро Парк Культуры.",
   applicationName: "Romanov Records",
+  alternates: {
+    canonical: "/",
+  },
   openGraph: {
+    url: "/",
     title: "Romanov Records — Студия звукозаписи в Москве",
     description:
       "Профессиональная студия звукозаписи. Москва, ул. Тимура Фрунзе 16, 5 минут от метро Парк Культуры.",
@@ -34,6 +38,7 @@ const orgJsonLd = {
   "@type": "MusicGroup",
   name: "Romanov Records — Студия звукозаписи в Москве",
   alternateName: "Romanov Records",
+  url: siteUrl,
   description:
     "Профессиональная студия звукозаписи. Москва, ул. Тимура Фрунзе 16, 5 минут от метро Парк Культуры.",
   address: {
