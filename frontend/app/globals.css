@@ -206,36 +206,14 @@ body {
     transform: translateX(-50%);
   }
 
-  .mobile-hero-v1-tariffs {
-    position: absolute;
-    top: calc(1174 / 431 * 100vw);
-    left: 50%;
-    z-index: 3;
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    min-width: calc(146 / 431 * 100vw);
-    height: calc(56 / 431 * 100vw);
-    padding: calc(6 / 431 * 100vw) calc(19 / 431 * 100vw) 0;
-    transform: translateX(-50%);
-    border: calc(4 / 431 * 100vw) solid #dffff9;
-    border-radius: calc(12 / 431 * 100vw);
-    background: rgba(7,56,53,0.9);
-    color: #dffff9;
-    font-family: "Borsok", sans-serif;
-    font-size: calc(27 / 431 * 100vw);
-    line-height: 1;
-    letter-spacing: 0.02em;
-    text-transform: uppercase;
-    text-decoration: none;
-  }
-
   #tariffs {
-    padding-top: calc(18 / 431 * 100vw);
+    padding-top: calc(34 / 431 * 100vw);
   }
 
   #tariffs .tariffs-section-title {
-    display: none;
+    display: flex;
+    margin-bottom: calc(34 / 431 * 100vw);
+    padding-top: 0 !important;
   }
 
   .comfort-section {
@@ -270,7 +248,8 @@ body {
     margin-bottom: calc(40 / 431 * 100vw);
   }
 
-  .comfort-title-wrap .section-title {
+  .comfort-title-wrap .section-title,
+  #tariffs .tariffs-section-title .section-title {
     padding: calc(14 / 431 * 100vw) calc(32 / 431 * 100vw) calc(8 / 431 * 100vw);
     border: calc(2 / 431 * 100vw) solid #dffff9;
     background: rgba(7,56,53,0.82);

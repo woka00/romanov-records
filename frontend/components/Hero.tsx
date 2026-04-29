@@ -85,9 +85,6 @@ export default function Hero() {
           <img src={MOBILE_V1.gear} alt="" draggable={false} />
         </div>
 
-        <a className="mobile-hero-v1-tariffs hero-reveal" href="#tariffs">
-          Тарифы
-        </a>
       </div>
 
       {/* ── Декоративный овал (mobile + desktop) ── */}

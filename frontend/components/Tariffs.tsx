@@ -112,7 +112,10 @@ export default function Tariffs() {
   return (
     <section id="tariffs" className="relative py-20 px-4 sm:px-8">
       {/* section title */}
-      <div className="tariffs-section-title flex justify-center mb-12" style={{ paddingTop: "2rem" }}>
+      <div
+        className="tariffs-section-title flex justify-center mb-12"
+        style={{ display: "flex", paddingTop: "2rem" }}
+      >
         <h2
           className="section-title font-heading font-black text-white uppercase"
           style={{ fontSize: "clamp(1.8rem, 4vw, 2.8rem)", letterSpacing: "0.06em" }}
