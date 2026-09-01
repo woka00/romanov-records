@@ -185,7 +185,7 @@ export default function Location() {
           {/* phones */}
           <div className="flex flex-col gap-1">
             <p className="font-body text-white/50 text-xs uppercase tracking-widest mb-1">для записи</p>
-            {["+7 (901) 505 1302", "+7 (985) 022 7554", "+7 (903) 752 7530"].map((phone) => (
+            {["+7 (985) 022 7554", "+7 (903) 752 7530"].map((phone) => (
               <p key={phone} className="font-body text-white text-lg">
                 <a href={`tel:${phone.replace(/\D/g, "")}`} className="hover:text-studio-teal transition-colors">
                   {phone}
