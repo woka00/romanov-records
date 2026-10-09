@@ -48,25 +48,20 @@ export async function POST(request: NextRequest) {
     return redirectTo(request, "/admin/login", "invalid");
   }
 
-  let data: { id?: unknown; session?: unknown };
+  let data: { id?: unknown };
   try {
     data = await backendRes.json();
   } catch {
     return redirectTo(request, "/admin/login", "invalid");
   }
 
-  if (
-    data.id === undefined ||
-    data.id === null ||
-    data.id === "" ||
-    typeof data.session !== "string" ||
-    data.session === ""
-  ) {
+  const session = readCookie(backendRes.headers.get("set-cookie"), COOKIE_NAME);
+  if (data.id === undefined || data.id === null || data.id === "" || !session) {
     return redirectTo(request, "/admin/login", "invalid");
   }
 
   const response = redirectTo(request, "/admin");
-  response.cookies.set(COOKIE_NAME, data.session, {
+  response.cookies.set(COOKIE_NAME, session, {
     path: "/",
     httpOnly: true,
     secure: isSecureRequest(request),
@@ -75,4 +70,11 @@ export async function POST(request: NextRequest) {
   });
 
   return response;
+}
+
+function readCookie(header: string | null, name: string): string | null {
+  if (!header) return null;
+  const prefix = `${name}=`;
+  const cookie = header.split(";")[0];
+  return cookie.startsWith(prefix) ? cookie.slice(prefix.length) : null;
 }

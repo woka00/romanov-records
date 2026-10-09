@@ -3,10 +3,11 @@ package main
 import (
 	"context"
 	"fmt"
-	"log"
+	"log/slog"
 	"os"
 	"os/signal"
 	adminsession "romanov/backend/internal/core/auth/adminsession"
+	"romanov/backend/internal/core/database"
 	transport_http_server "romanov/backend/internal/core/transport/http/server"
 	admins_repository "romanov/backend/internal/features/admins/repository"
 	admins_service "romanov/backend/internal/features/admins/service"
@@ -16,33 +17,28 @@ import (
 	bookings_transport "romanov/backend/internal/features/bookings/transport"
 	telegram_notifier "romanov/backend/internal/features/notifications/telegram"
 	"syscall"
-
-	"github.com/jackc/pgx/v5"
 )
 
 func main() {
+	logger := slog.New(slog.NewJSONHandler(os.Stdout, nil))
+	slog.SetDefault(logger)
+
 	ctx, cancel := signal.NotifyContext(
 		context.Background(),
 		syscall.SIGINT, syscall.SIGTERM,
 	)
 	defer cancel()
 
-	databaseURL := os.Getenv("DATABASE_URL")
-	if databaseURL == "" {
-		panic("DATABASE_URL is empty")
-	}
-
 	sessionSecret, err := adminsession.SecretFromEnv()
 	if err != nil {
 		panic(fmt.Errorf("get admin session secret: %w", err))
 	}
 
-	conn, err := pgx.Connect(ctx, databaseURL)
+	pool, err := database.Open(ctx)
 	if err != nil {
-		panic(fmt.Errorf("connect postgres: %w", err))
+		panic(err)
 	}
-
-	defer conn.Close(ctx)
+	defer pool.Close()
 
 	tgToken := os.Getenv("TELEGRAM_BOT_TOKEN")
 	tgChatIDs := telegram_notifier.ParseChatIDs(os.Getenv("TELEGRAM_NOTIFY_CHAT_IDS"))
@@ -50,21 +46,21 @@ func main() {
 	tgRelaySecret := os.Getenv("TELEGRAM_RELAY_SECRET")
 	tgNotifier := telegram_notifier.NewWithAPIBaseAndRelaySecret(tgToken, tgChatIDs, tgAPIBase, tgRelaySecret)
 	if tgToken == "" || len(tgChatIDs) == 0 {
-		log.Println("telegram: notifier disabled (TELEGRAM_BOT_TOKEN or TELEGRAM_NOTIFY_CHAT_IDS not set)")
+		slog.Info("telegram notifier disabled")
 	} else {
-		log.Printf("telegram: notifier ready, %d chat(s) configured", len(tgChatIDs))
+		slog.Info("telegram notifier ready", "chat_count", len(tgChatIDs))
 		if tgAPIBase != "" {
-			log.Printf("telegram: using custom API base %s", tgAPIBase)
+			slog.Info("telegram custom API base configured", "api_base", tgAPIBase)
 		}
 	}
 
-	bookingRepo := bookings_repository.NewPostgresRepository(conn)
+	bookingRepo := bookings_repository.NewPostgresRepository(pool)
 	bookingService := bookings_service.NewService(bookingRepo, tgNotifier)
 	bookingTransportHTTP := bookings_transport.NewHandler(bookingService, sessionSecret)
 
 	bookingsRoutes := bookingTransportHTTP.Routes()
 
-	adminRepo := admins_repository.NewPostgresRepository(conn)
+	adminRepo := admins_repository.NewPostgresRepository(pool)
 	adminService := admins_service.NewService(adminRepo)
 	adminTransportHTTP := admins_transport.NewHandler(adminService, sessionSecret)
 
@@ -77,9 +73,11 @@ func main() {
 	httpServer := transport_http_server.NewHTTPServer(
 		transport_http_server.NewConfigMust(),
 	)
+	httpServer.RegisterReadinessCheck(pool.Ping)
 	httpServer.RegisterAPIRouters(apiVersionRouter)
 
 	if err := httpServer.Run(ctx); err != nil {
-		fmt.Println(err)
+		slog.Error("HTTP server stopped", "error", err)
+		os.Exit(1)
 	}
 }

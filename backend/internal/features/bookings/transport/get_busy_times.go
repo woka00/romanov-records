@@ -1,8 +1,8 @@
 package bookings_transport
 
 import (
-	"encoding/json"
 	"net/http"
+	transport_http "romanov/backend/internal/core/transport/http"
 )
 
 func (h *BookingHTTPHandler) GetBusyTimes(w http.ResponseWriter, r *http.Request) {
@@ -18,6 +18,5 @@ func (h *BookingHTTPHandler) GetBusyTimes(w http.ResponseWriter, r *http.Request
 		return
 	}
 
-	w.Header().Set("Content-Type", "application/json")
-	_ = json.NewEncoder(w).Encode(BusyTimesResponse{Busy: times})
+	transport_http.WriteJSON(w, http.StatusOK, BusyTimesResponse{Busy: times})
 }

@@ -4,28 +4,31 @@ import { getBookings, logoutAction, refreshAction, updateStatusAction, type Book
 const TEAL = "#1db8a6";
 
 const STATUS_ORDER: Record<string, number> = {
-  new:           0,
-  "Согласовано": 1,
-  "Выполнено":   2,
+  new:       0,
+  confirmed: 1,
+  completed: 2,
+  cancelled: 3,
 };
 
 const STATUS_LABEL: Record<string, string> = {
-  new:           "Новая",
-  "Согласовано": "Согласовано",
-  "Выполнено":   "Выполнено",
+  new:       "Новая",
+  confirmed: "Согласовано",
+  completed: "Выполнено",
+  cancelled: "Отменено",
 };
 
 const STATUS_COLOR: Record<string, { bg: string; border: string; text: string }> = {
-  new:           { bg: "rgba(251,191,36,0.12)",  border: "rgba(251,191,36,0.4)",  text: "#fbbf24" },
-  "Согласовано": { bg: "rgba(29,184,166,0.12)",  border: "rgba(29,184,166,0.4)",  text: TEAL },
-  "Выполнено":   { bg: "rgba(255,255,255,0.06)", border: "rgba(255,255,255,0.2)", text: "rgba(255,255,255,0.45)" },
+  new:       { bg: "rgba(251,191,36,0.12)",  border: "rgba(251,191,36,0.4)",  text: "#fbbf24" },
+  confirmed: { bg: "rgba(29,184,166,0.12)",  border: "rgba(29,184,166,0.4)",  text: TEAL },
+  completed: { bg: "rgba(255,255,255,0.06)", border: "rgba(255,255,255,0.2)", text: "rgba(255,255,255,0.45)" },
+  cancelled: { bg: "rgba(248,113,113,0.08)", border: "rgba(248,113,113,0.25)", text: "#f87171" },
 };
 
 function sortBookings(list: Booking[]): Booking[] {
   return [...list].sort((a, b) => {
-    const od = (STATUS_ORDER[a.Status] ?? 99) - (STATUS_ORDER[b.Status] ?? 99);
+    const od = (STATUS_ORDER[a.status] ?? 99) - (STATUS_ORDER[b.status] ?? 99);
     if (od !== 0) return od;
-    return new Date(b.CreatedAt).getTime() - new Date(a.CreatedAt).getTime();
+    return new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
   });
 }
 
@@ -84,7 +87,7 @@ function StatusBtn({
 }
 
 function BookingCard({ booking }: { booking: Booking }) {
-  const sc = STATUS_COLOR[booking.Status] ?? STATUS_COLOR["Выполнено"];
+  const sc = STATUS_COLOR[booking.status] ?? STATUS_COLOR.completed;
   return (
     <div
       style={{
@@ -102,7 +105,7 @@ function BookingCard({ booking }: { booking: Booking }) {
       <div style={{ display: "flex", flexDirection: "column", gap: "0.5rem", minWidth: 0 }}>
         <div style={{ display: "flex", alignItems: "center", gap: "0.75rem", flexWrap: "wrap" }}>
           <span style={{ fontFamily: '"Borsok", sans-serif', color: "#fff", fontSize: "1rem", letterSpacing: "0.03em" }}>
-            {booking.FullName}
+            {booking.full_name}
           </span>
           <span
             style={{
@@ -118,16 +121,16 @@ function BookingCard({ booking }: { booking: Booking }) {
               whiteSpace: "nowrap",
             }}
           >
-            {STATUS_LABEL[booking.Status] ?? booking.Status}
+            {STATUS_LABEL[booking.status] ?? booking.status}
           </span>
         </div>
 
         <div style={{ display: "flex", gap: "1.5rem", flexWrap: "wrap" }}>
-          <span style={contact}>{booking.PhoneNumber}</span>
-          {booking.TelegramUsername && <span style={contact}>{booking.TelegramUsername}</span>}
+          <span style={contact}>{booking.phone_number}</span>
+          {booking.telegram_username && <span style={contact}>{booking.telegram_username}</span>}
         </div>
 
-        {booking.DesiredDate.startsWith("1970") ? (
+        {booking.desired_date.startsWith("1970") ? (
           <div>
             <span style={{
               ...contact,
@@ -145,39 +148,42 @@ function BookingCard({ booking }: { booking: Booking }) {
           </div>
         ) : (
           <div style={{ display: "flex", gap: "1rem", alignItems: "center" }}>
-            <span style={{ ...contact, color: TEAL }}>{fmtDate(booking.DesiredDate)}</span>
-            <span style={{ ...contact, color: TEAL }}>{fmtTime(booking.DesiredTime)}</span>
+            <span style={{ ...contact, color: TEAL }}>{fmtDate(booking.desired_date)}</span>
+            <span style={{ ...contact, color: TEAL }}>{fmtTime(booking.desired_time)} · {booking.duration_hours} ч.</span>
           </div>
         )}
 
-        {booking.RequestDetails && (
-          <p style={{ ...contact, color: "rgba(255,255,255,0.65)", margin: 0 }}>{booking.RequestDetails}</p>
+        {booking.request_details && (
+          <p style={{ ...contact, color: "rgba(255,255,255,0.65)", margin: 0 }}>{booking.request_details}</p>
         )}
 
-        {booking.Comment && (
-          <p style={{ ...contact, color: "rgba(255,255,255,0.4)", fontStyle: "italic", margin: 0 }}>{booking.Comment}</p>
+        {booking.comment && (
+          <p style={{ ...contact, color: "rgba(255,255,255,0.4)", fontStyle: "italic", margin: 0 }}>{booking.comment}</p>
         )}
 
         <p style={{ ...contact, color: "rgba(255,255,255,0.25)", fontSize: "0.72rem", margin: 0 }}>
-          Заявка от {fmtDate(booking.CreatedAt)}
+          Заявка от {fmtDate(booking.created_at)}
         </p>
       </div>
 
       <div style={{ display: "flex", flexDirection: "column", gap: "0.4rem", minWidth: 120 }}>
-        {booking.Status === "new" && (
+        {booking.status === "new" && (
           <>
-            <StatusBtn bookingId={booking.ID} newStatus="Согласовано" label="Согласовать" color={TEAL} />
-            <StatusBtn bookingId={booking.ID} newStatus="Выполнено"   label="Выполнено"   color="rgba(255,255,255,0.35)" />
+            <StatusBtn bookingId={booking.id} newStatus="confirmed" label="Согласовать" color={TEAL} />
+            <StatusBtn bookingId={booking.id} newStatus="cancelled" label="Отменить" color="rgba(248,113,113,0.65)" />
           </>
         )}
-        {booking.Status === "Согласовано" && (
+        {booking.status === "confirmed" && (
           <>
-            <StatusBtn bookingId={booking.ID} newStatus="Выполнено" label="Выполнено" color="rgba(255,255,255,0.35)" />
-            <StatusBtn bookingId={booking.ID} newStatus="new"       label="Вернуть"   color="rgba(255,100,100,0.6)" />
+            <StatusBtn bookingId={booking.id} newStatus="completed" label="Выполнено" color="rgba(255,255,255,0.35)" />
+            <StatusBtn bookingId={booking.id} newStatus="cancelled" label="Отменить" color="rgba(248,113,113,0.65)" />
           </>
         )}
-        {booking.Status === "Выполнено" && (
-          <StatusBtn bookingId={booking.ID} newStatus="new" label="Вернуть" color="rgba(255,100,100,0.6)" />
+        {booking.status === "completed" && (
+          <StatusBtn bookingId={booking.id} newStatus="new" label="Вернуть" color="rgba(255,100,100,0.6)" />
+        )}
+        {booking.status === "cancelled" && (
+          <StatusBtn bookingId={booking.id} newStatus="new" label="Восстановить" color={TEAL} />
         )}
       </div>
     </div>
@@ -203,7 +209,12 @@ function Section({
   );
 }
 
-export default async function AdminPage() {
+export default async function AdminPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ error?: string }>;
+}) {
+  const params = await searchParams;
   const result = await getBookings();
 
   if (result === "unauthorized") {
@@ -212,7 +223,7 @@ export default async function AdminPage() {
 
   const isError = result === "error";
   const bookings = isError ? [] : sortBookings(result);
-  const byStatus = (s: string) => bookings.filter(b => b.Status === s);
+  const byStatus = (s: Booking["status"]) => bookings.filter(b => b.status === s);
 
   return (
     <div style={{ minHeight: "100vh", padding: "2rem 1.5rem", maxWidth: 900, margin: "0 auto" }}>
@@ -278,6 +289,25 @@ export default async function AdminPage() {
         </div>
       </div>
 
+      {params.error && (
+        <p
+          role="alert"
+          style={{
+            background: "rgba(248,113,113,0.08)",
+            border: "1px solid rgba(248,113,113,0.25)",
+            borderRadius: 10,
+            color: "#f87171",
+            fontFamily: '"BerlinType", sans-serif',
+            margin: "0 0 1.5rem",
+            padding: "0.75rem 1rem",
+          }}
+        >
+          {params.error === "conflict"
+            ? "Не удалось восстановить заявку: её время уже занято."
+            : "Не удалось изменить статус заявки. Попробуйте ещё раз."}
+        </p>
+      )}
+
       {isError && (
         <p style={{
           fontFamily: '"BerlinType", sans-serif',
@@ -300,17 +330,22 @@ export default async function AdminPage() {
         <div style={{ display: "flex", flexDirection: "column", gap: "2rem" }}>
           {byStatus("new").length > 0 && (
             <Section title="Новые" count={byStatus("new").length} accent="#fbbf24">
-              {byStatus("new").map(b => <BookingCard key={b.ID} booking={b} />)}
+              {byStatus("new").map(b => <BookingCard key={b.id} booking={b} />)}
             </Section>
           )}
-          {byStatus("Согласовано").length > 0 && (
-            <Section title="Согласовано" count={byStatus("Согласовано").length} accent={TEAL}>
-              {byStatus("Согласовано").map(b => <BookingCard key={b.ID} booking={b} />)}
+          {byStatus("confirmed").length > 0 && (
+            <Section title="Согласовано" count={byStatus("confirmed").length} accent={TEAL}>
+              {byStatus("confirmed").map(b => <BookingCard key={b.id} booking={b} />)}
             </Section>
           )}
-          {byStatus("Выполнено").length > 0 && (
-            <Section title="Выполнено" count={byStatus("Выполнено").length} accent="rgba(255,255,255,0.3)">
-              {byStatus("Выполнено").map(b => <BookingCard key={b.ID} booking={b} />)}
+          {byStatus("completed").length > 0 && (
+            <Section title="Выполнено" count={byStatus("completed").length} accent="rgba(255,255,255,0.3)">
+              {byStatus("completed").map(b => <BookingCard key={b.id} booking={b} />)}
+            </Section>
+          )}
+          {byStatus("cancelled").length > 0 && (
+            <Section title="Отменено" count={byStatus("cancelled").length} accent="#f87171">
+              {byStatus("cancelled").map(b => <BookingCard key={b.id} booking={b} />)}
             </Section>
           )}
         </div>

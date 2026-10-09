@@ -8,9 +8,14 @@ import (
 	"time"
 
 	"github.com/jackc/pgx/v5"
+	"github.com/jackc/pgx/v5/pgconn"
 )
 
-var ErrBookingNotFound = errors.New("booking not found")
+var (
+	ErrBookingNotFound   = errors.New("booking not found")
+	ErrBookingConflict   = errors.New("booking time conflicts with an existing booking")
+	ErrInvalidTransition = errors.New("invalid booking status transition")
+)
 
 type Repository interface {
 	Create(ctx context.Context, booking domain.Booking) (int, error)
@@ -19,13 +24,18 @@ type Repository interface {
 	UpdateStatus(ctx context.Context, id int, status string) error
 }
 
-type PostgresRepository struct {
-	conn *pgx.Conn
+type DB interface {
+	QueryRow(ctx context.Context, sql string, args ...any) pgx.Row
+	Query(ctx context.Context, sql string, args ...any) (pgx.Rows, error)
 }
 
-func NewPostgresRepository(conn *pgx.Conn) *PostgresRepository {
+type PostgresRepository struct {
+	db DB
+}
+
+func NewPostgresRepository(db DB) *PostgresRepository {
 	return &PostgresRepository{
-		conn: conn,
+		db: db,
 	}
 }
 
@@ -52,7 +62,7 @@ func (r *PostgresRepository) Create(
 	`
 	var id int
 
-	err := r.conn.QueryRow(
+	err := r.db.QueryRow(
 		ctx,
 		sqlQuery,
 		booking.FullName,
@@ -69,6 +79,10 @@ func (r *PostgresRepository) Create(
 	).Scan(&id)
 
 	if err != nil {
+		var pgErr *pgconn.PgError
+		if errors.As(err, &pgErr) && pgErr.Code == "23P01" && pgErr.ConstraintName == "bookings_no_overlapping_times" {
+			return 0, ErrBookingConflict
+		}
 		return 0, fmt.Errorf("create booking: %w", err)
 	}
 
@@ -84,6 +98,7 @@ func (r *PostgresRepository) List(ctx context.Context) ([]domain.Booking, error)
 			telegram_username,
 			desired_date,
 			desired_time,
+			duration_hours,
 			request_details,
 			comment,
 			status,
@@ -93,7 +108,7 @@ func (r *PostgresRepository) List(ctx context.Context) ([]domain.Booking, error)
 		ORDER BY created_at DESC
 	`
 
-	rows, err := r.conn.Query(ctx, sqlQuery)
+	rows, err := r.db.Query(ctx, sqlQuery)
 	if err != nil {
 		return nil, fmt.Errorf("list bookings: %w", err)
 	}
@@ -111,6 +126,7 @@ func (r *PostgresRepository) List(ctx context.Context) ([]domain.Booking, error)
 			&booking.TelegramUsername,
 			&booking.DesiredDate,
 			&booking.DesiredTime,
+			&booking.DurationHours,
 			&booking.RequestDetails,
 			&booking.Comment,
 			&booking.Status,
@@ -132,16 +148,24 @@ func (r *PostgresRepository) List(ctx context.Context) ([]domain.Booking, error)
 
 func (r *PostgresRepository) GetBusyTimes(ctx context.Context, date time.Time) ([]string, error) {
 	sqlQuery := `
-		SELECT EXTRACT(HOUR FROM desired_time)::int,
-		       EXTRACT(MINUTE FROM desired_time)::int,
-		       duration_hours
+		SELECT
+			GREATEST(desired_date + desired_time, $1::date::timestamp),
+			LEAST(
+				desired_date + desired_time + duration_hours * INTERVAL '1 hour',
+				($1::date + 1)::timestamp
+			)
 		FROM romanov.bookings
-		WHERE desired_date = $1
-		  AND status != 'cancelled'
+		WHERE status != 'cancelled'
+		  AND desired_date > DATE '1970-01-01'
+		  AND tsrange(
+			desired_date + desired_time,
+			desired_date + desired_time + duration_hours * INTERVAL '1 hour',
+			'[)'
+		  ) && tsrange($1::date::timestamp, ($1::date + 1)::timestamp, '[)')
 		ORDER BY desired_time
 	`
 
-	rows, err := r.conn.Query(ctx, sqlQuery, date)
+	rows, err := r.db.Query(ctx, sqlQuery, date)
 	if err != nil {
 		return nil, fmt.Errorf("get busy times: %w", err)
 	}
@@ -151,18 +175,12 @@ func (r *PostgresRepository) GetBusyTimes(ctx context.Context, date time.Time) (
 	slots := make([]string, 0)
 
 	for rows.Next() {
-		var h, m, dur int
-		if err := rows.Scan(&h, &m, &dur); err != nil {
+		var start, end time.Time
+		if err := rows.Scan(&start, &end); err != nil {
 			return nil, fmt.Errorf("scan busy time: %w", err)
 		}
-		startMin := h*60 + m
-		totalSlots := dur * 2 // каждые 30 минут
-		for i := 0; i < totalSlots; i++ {
-			t := startMin + i*30
-			if t >= 24*60 {
-				break
-			}
-			slot := fmt.Sprintf("%02d:%02d", t/60, t%60)
+		for slotTime := start; slotTime.Before(end); slotTime = slotTime.Add(30 * time.Minute) {
+			slot := fmt.Sprintf("%02d:%02d", slotTime.Hour(), slotTime.Minute())
 			if _, exists := seen[slot]; !exists {
 				seen[slot] = struct{}{}
 				slots = append(slots, slot)
@@ -175,18 +193,43 @@ func (r *PostgresRepository) GetBusyTimes(ctx context.Context, date time.Time) (
 
 func (r *PostgresRepository) UpdateStatus(ctx context.Context, id int, status string) error {
 	sqlQuery := `
-		UPDATE romanov.bookings
-		SET status = $2, updated_at = NOW()
-		WHERE id = $1
+		WITH current AS MATERIALIZED (
+			SELECT id, status
+			FROM romanov.bookings
+			WHERE id = $1
+			FOR UPDATE
+		), updated AS (
+			UPDATE romanov.bookings AS booking
+			SET status = $2, updated_at = NOW()
+			FROM current
+			WHERE booking.id = current.id
+			  AND (
+				(current.status = 'new' AND $2 IN ('confirmed', 'completed', 'cancelled'))
+				OR (current.status = 'confirmed' AND $2 IN ('new', 'completed', 'cancelled'))
+				OR (current.status IN ('completed', 'cancelled') AND $2 = 'new')
+			  )
+			RETURNING booking.id
+		)
+		SELECT
+			EXISTS(SELECT 1 FROM current),
+			EXISTS(SELECT 1 FROM updated)
 	`
 
-	tag, err := r.conn.Exec(ctx, sqlQuery, id, status)
+	var exists, updated bool
+	err := r.db.QueryRow(ctx, sqlQuery, id, status).Scan(&exists, &updated)
 	if err != nil {
+		var pgErr *pgconn.PgError
+		if errors.As(err, &pgErr) && pgErr.Code == "23P01" && pgErr.ConstraintName == "bookings_no_overlapping_times" {
+			return ErrBookingConflict
+		}
 		return fmt.Errorf("update booking status: %w", err)
 	}
 
-	if tag.RowsAffected() == 0 {
+	if !exists {
 		return ErrBookingNotFound
+	}
+	if !updated {
+		return ErrInvalidTransition
 	}
 
 	return nil

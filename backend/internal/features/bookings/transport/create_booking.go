@@ -1,14 +1,16 @@
 package bookings_transport
 
 import (
-	"encoding/json"
+	"errors"
 	"net/http"
+	transport_http "romanov/backend/internal/core/transport/http"
+	bookings_repository "romanov/backend/internal/features/bookings/repository"
 	bookings_service "romanov/backend/internal/features/bookings/service"
 )
 
 func (h *BookingHTTPHandler) CreateBooking(w http.ResponseWriter, r *http.Request) {
 	var req CreateBookingRequest
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+	if err := transport_http.DecodeJSON(w, r, &req); err != nil {
 		http.Error(w, "invalid request body", http.StatusBadRequest)
 		return
 	}
@@ -31,14 +33,15 @@ func (h *BookingHTTPHandler) CreateBooking(w http.ResponseWriter, r *http.Reques
 
 	id, err := h.service.CreateBooking(r.Context(), input)
 	if err != nil {
+		if errors.Is(err, bookings_repository.ErrBookingConflict) {
+			http.Error(w, "Выбранное время уже занято. Пожалуйста, выберите другой слот.", http.StatusConflict)
+			return
+		}
 		http.Error(w, "failed to create booking", http.StatusBadRequest)
 		return
 	}
 
-	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(http.StatusCreated)
-
-	_ = json.NewEncoder(w).Encode(CreateBookingResponse{
+	transport_http.WriteJSON(w, http.StatusCreated, CreateBookingResponse{
 		ID: id,
 	})
 }

@@ -5,17 +5,20 @@ import (
 	transport_http_server "romanov/backend/internal/core/transport/http/server"
 	transport_http_middleware "romanov/backend/internal/core/transport/middleware"
 	bookings_service "romanov/backend/internal/features/bookings/service"
+	"time"
 )
 
 type BookingHTTPHandler struct {
 	service       *bookings_service.Service
 	sessionSecret string
+	createLimiter *transport_http_middleware.IPRateLimiter
 }
 
 func NewHandler(service *bookings_service.Service, sessionSecret string) *BookingHTTPHandler {
 	return &BookingHTTPHandler{
 		service:       service,
 		sessionSecret: sessionSecret,
+		createLimiter: transport_http_middleware.NewIPRateLimiter(20, time.Minute),
 	}
 }
 
@@ -24,7 +27,7 @@ func (h *BookingHTTPHandler) Routes() []transport_http_server.Route {
 		{
 			Method:  http.MethodPost,
 			Path:    "/bookings",
-			Handler: http.HandlerFunc(h.CreateBooking),
+			Handler: h.createLimiter.Middleware(http.HandlerFunc(h.CreateBooking)),
 		},
 		{
 			Method:  http.MethodGet,

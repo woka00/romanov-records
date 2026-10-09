@@ -1,9 +1,10 @@
 package admins_transport
 
 import (
-	"encoding/json"
 	"net/http"
 	adminsession "romanov/backend/internal/core/auth/adminsession"
+	transport_http "romanov/backend/internal/core/transport/http"
+	transport_http_middleware "romanov/backend/internal/core/transport/middleware"
 	"time"
 
 	admins_service "romanov/backend/internal/features/admins/service"
@@ -12,19 +13,21 @@ import (
 type Handler struct {
 	service       *admins_service.Service
 	sessionSecret string
+	loginLimiter  *transport_http_middleware.IPRateLimiter
 }
 
 func NewHandler(service *admins_service.Service, sessionSecret string) *Handler {
 	return &Handler{
 		service:       service,
 		sessionSecret: sessionSecret,
+		loginLimiter:  transport_http_middleware.NewIPRateLimiter(5, time.Minute),
 	}
 }
 
 func (h *Handler) Login(w http.ResponseWriter, r *http.Request) {
 	var req LoginRequest
 
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+	if err := transport_http.DecodeJSON(w, r, &req); err != nil {
 		http.Error(w, "invalid request body", http.StatusBadRequest)
 		return
 	}
@@ -50,12 +53,8 @@ func (h *Handler) Login(w http.ResponseWriter, r *http.Request) {
 		Expires:  expiresAt,
 	})
 
-	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(http.StatusOK)
-
-	_ = json.NewEncoder(w).Encode(LoginResponse{
-		ID:      adminID,
-		Session: session,
+	transport_http.WriteJSON(w, http.StatusOK, LoginResponse{
+		ID: adminID,
 	})
 }
 

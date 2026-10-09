@@ -15,12 +15,16 @@ type Repository interface {
 
 var ErrAdminNotFound = errors.New("admin not found")
 
-type PostgresRepository struct {
-	conn *pgx.Conn
+type QueryRower interface {
+	QueryRow(ctx context.Context, sql string, args ...any) pgx.Row
 }
 
-func NewPostgresRepository(conn *pgx.Conn) *PostgresRepository {
-	return &PostgresRepository{conn: conn}
+type PostgresRepository struct {
+	db QueryRower
+}
+
+func NewPostgresRepository(db QueryRower) *PostgresRepository {
+	return &PostgresRepository{db: db}
 }
 
 func (r *PostgresRepository) GetByLogin(ctx context.Context, login string) (domain.Admin, error) {
@@ -32,7 +36,7 @@ func (r *PostgresRepository) GetByLogin(ctx context.Context, login string) (doma
 
 	var admin domain.Admin
 
-	err := r.conn.QueryRow(ctx, query, login).Scan(
+	err := r.db.QueryRow(ctx, query, login).Scan(
 		&admin.ID,
 		&admin.Login,
 		&admin.PasswordHash,

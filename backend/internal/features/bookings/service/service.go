@@ -49,6 +49,9 @@ func (s *Service) CreateBooking(
 	if err != nil {
 		return 0, fmt.Errorf("desiredTime parse: %w", err)
 	}
+	if desiredTime.Minute() != 0 && desiredTime.Minute() != 30 {
+		return 0, fmt.Errorf("desiredTime must use a 30-minute boundary")
+	}
 
 	now := time.Now()
 	booking := domain.Booking{
@@ -60,7 +63,7 @@ func (s *Service) CreateBooking(
 		DurationHours:    input.DurationHours,
 		RequestDetails:   input.RequestDetails,
 		Comment:          input.Comment,
-		Status:           "new",
+		Status:           domain.BookingStatusNew,
 		CreatedAt:        now,
 		UpdatedAt:        now,
 	}
@@ -93,16 +96,11 @@ func (s *Service) GetBusyTimes(ctx context.Context, date string) ([]string, erro
 	return s.repo.GetBusyTimes(ctx, d)
 }
 
-var allowedStatuses = map[string]bool{
-	"new":         true,
-	"Согласовано": true,
-	"Выполнено":   true,
-}
-
 func (s *Service) UpdateBookingStatus(ctx context.Context, id int, status string) error {
-	if !allowedStatuses[status] {
+	bookingStatus := domain.BookingStatus(status)
+	if !bookingStatus.IsValid() {
 		return fmt.Errorf("недопустимый статус: %s", status)
 	}
 
-	return s.repo.UpdateStatus(ctx, id, status)
+	return s.repo.UpdateStatus(ctx, id, string(bookingStatus))
 }

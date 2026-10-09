@@ -1,8 +1,8 @@
 package bookings_transport
 
 import (
-	"encoding/json"
 	"net/http"
+	transport_http "romanov/backend/internal/core/transport/http"
 )
 
 func (h *BookingHTTPHandler) ListBookings(w http.ResponseWriter, r *http.Request) {
@@ -12,6 +12,9 @@ func (h *BookingHTTPHandler) ListBookings(w http.ResponseWriter, r *http.Request
 		return
 	}
 
-	w.Header().Set("Content-Type", "application/json")
-	_ = json.NewEncoder(w).Encode(bookings)
+	response := make([]BookingResponse, 0, len(bookings))
+	for _, booking := range bookings {
+		response = append(response, NewBookingResponse(booking))
+	}
+	transport_http.WriteJSON(w, http.StatusOK, response)
 }

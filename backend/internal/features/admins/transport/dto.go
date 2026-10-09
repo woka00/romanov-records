@@ -6,6 +6,5 @@ type LoginRequest struct {
 }
 
 type LoginResponse struct {
-	ID      int    `json:"id"`
-	Session string `json:"session"`
+	ID int `json:"id"`
 }

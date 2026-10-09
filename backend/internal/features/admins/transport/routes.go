@@ -11,7 +11,7 @@ func (h *Handler) Routes() []transport_http_server.Route {
 		{
 			Method:  http.MethodPost,
 			Path:    "/admin/login",
-			Handler: http.HandlerFunc(h.Login),
+			Handler: h.loginLimiter.Middleware(http.HandlerFunc(h.Login)),
 		},
 		{
 			Method:  http.MethodPost,

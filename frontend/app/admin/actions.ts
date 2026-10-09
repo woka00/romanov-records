@@ -37,8 +37,15 @@ export async function updateStatusAction(formData: FormData) {
     cookieStore.delete(COOKIE_NAME);
     redirect("/admin/login");
   }
+  if (res.status === 409) {
+    redirect("/admin?error=conflict");
+  }
+  if (!res.ok) {
+    redirect("/admin?error=update");
+  }
 
   revalidatePath("/admin");
+  redirect("/admin");
 }
 
 export async function refreshAction() {
@@ -47,16 +54,18 @@ export async function refreshAction() {
 }
 
 export interface Booking {
-  ID:               number;
-  FullName:         string;
-  PhoneNumber:      string;
-  TelegramUsername: string;
-  DesiredDate:      string;
-  DesiredTime:      string;
-  RequestDetails:   string;
-  Comment:          string;
-  Status:           string;
-  CreatedAt:        string;
+  id:                number;
+  full_name:         string;
+  phone_number:      string;
+  telegram_username: string;
+  desired_date:      string;
+  desired_time:      string;
+  duration_hours:    number;
+  request_details:   string;
+  comment:           string;
+  status:            "new" | "confirmed" | "completed" | "cancelled";
+  created_at:        string;
+  updated_at:        string;
 }
 
 export async function getBookings(): Promise<Booking[] | "unauthorized" | "error"> {
