@@ -15,6 +15,9 @@ export default function BookingModal({
   onClose: () => void;
 }) {
   const {
+    acknowledgements,
+    setAcknowledgements,
+    consentError,
     availabilityError,
     busyTimes,
     calendarOpen: calOpen,
@@ -333,9 +336,40 @@ export default function BookingModal({
               />
             </div>
 
+            <fieldset className="booking-consents" disabled={submitting}>
+              <legend>Перед отправкой заявки</legend>
+              <p className="booking-consents-hint">Подтвердите ознакомление со всеми тремя документами. Ссылки откроются в новой вкладке.</p>
+              {([
+                { id: "privacy", href: "/privacy.html", text: "Политикой обработки персональных данных" },
+                { id: "oferta", href: "/oferta.html", text: "Публичной офертой" },
+                { id: "payment", href: "/oplata-i-vozvrat.html", text: "условиями оплаты и возврата" },
+              ] as const).map(({ id, href, text }) => (
+                <div className="booking-consent" key={id}>
+                  <input
+                    id={`booking-consent-${id}`}
+                    type="checkbox"
+                    checked={acknowledgements[id]}
+                    required
+                    aria-invalid={consentError && !acknowledgements[id]}
+                    aria-describedby={consentError && !acknowledgements[id] ? "booking-consent-error" : undefined}
+                    onChange={event => setAcknowledgements(current => ({ ...current, [id]: event.target.checked }))}
+                  />
+                  <label htmlFor={`booking-consent-${id}`}>
+                    Я ознакомлен(а) с <a href={href} target="_blank" rel="noopener noreferrer">{text}</a>
+                  </label>
+                </div>
+              ))}
+              {consentError && !Object.values(acknowledgements).every(Boolean) && (
+                <p id="booking-consent-error" role="alert" className="booking-consent-error">
+                  Чтобы отправить заявку, ознакомьтесь с документами и отметьте все три галочки.
+                </p>
+              )}
+              <p className="booking-consents-hint">Отправка заявки не является оплатой. По условиям оферты договор заключается при оплате.</p>
+            </fieldset>
+
             {/* Ошибка */}
             {submitErr && (
-              <p style={{
+              <p role="alert" style={{
                 fontFamily: '"BerlinType", sans-serif',
                 color: "#f87171",
                 fontSize: "0.85rem",

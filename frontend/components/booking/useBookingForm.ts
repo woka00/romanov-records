@@ -11,6 +11,8 @@ import {
 } from "./config";
 
 export function useBookingForm(isOpen: boolean, onClose: () => void) {
+  const [acknowledgements, setAcknowledgements] = useState({ privacy: false, oferta: false, payment: false });
+  const [consentError, setConsentError] = useState(false);
   const [name, setName] = useState("");
   const [phone, setPhone] = useState("");
   const [telegram, setTelegram] = useState("");
@@ -31,6 +33,8 @@ export function useBookingForm(isOpen: boolean, onClose: () => void) {
   const onlyMixingSelected = chosenServiceIDs.length === 1 && chosenServiceIDs[0] === "mixing";
 
   const reset = useCallback(() => {
+    setAcknowledgements({ privacy: false, oferta: false, payment: false });
+    setConsentError(false);
     setName("");
     setPhone("");
     setTelegram("");
@@ -90,7 +94,15 @@ export function useBookingForm(isOpen: boolean, onClose: () => void) {
   };
 
   const submit = async () => {
+    if (submitting) return;
     setSubmitError("");
+    if (!Object.values(acknowledgements).every(Boolean)) {
+      setConsentError(true);
+      const firstMissing = Object.entries(acknowledgements).find(([, checked]) => !checked)?.[0];
+      document.getElementById(`booking-consent-${firstMissing}`)?.focus();
+      return;
+    }
+    setConsentError(false);
     if (name.trim().length < 3) return setSubmitError("Введите имя (не менее 3 символов)");
     if (!phone.startsWith("+") || phone.replace(/\D/g, "").length < 10) {
       return setSubmitError("Номер телефона должен начинаться с + и содержать не менее 10 цифр");
@@ -141,6 +153,9 @@ export function useBookingForm(isOpen: boolean, onClose: () => void) {
   };
 
   return {
+    acknowledgements,
+    setAcknowledgements,
+    consentError,
     availabilityError,
     busyTimes,
     calendarOpen,
