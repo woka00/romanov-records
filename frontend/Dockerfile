@@ -12,6 +12,8 @@ ARG NEXT_PUBLIC_SITE_URL
 ENV BACKEND_URL=${BACKEND_URL}
 ENV NEXT_PUBLIC_SITE_URL=${NEXT_PUBLIC_SITE_URL}
 ENV NEXT_TELEMETRY_DISABLED=1
+# Build-only limits: leave memory for TypeScript and the running production services.
+ENV NODE_OPTIONS="--max-old-space-size=256"
 RUN npm run build
 
 FROM node:22-alpine AS runner
