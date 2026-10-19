@@ -63,7 +63,7 @@ const TARIFFS: TariffCard[] = [
     description:
       "Творческое пространство без тракта. Арендуйте студию «под ключ»: изолированная комната управления, просторная живая комната для записи. Идеально для репетиций, продакшн-сессий или работы с живым составом. Предоставляем интерфейсы, мониторы и чай/кофе в неограниченном количестве.",
     variant: "light",
-    price: <span className="tariff-price font-heading font-black text-xl">договорная</span>,
+    price: <span className="tariff-price font-heading font-black text-xl">1 750 ₽</span>,
   },
   {
     id: "turnkey",
@@ -71,7 +71,7 @@ const TARIFFS: TariffCard[] = [
     description:
       "Фиксируем живую энергетику. Записываем ударные, гитары (DI и микрофоном), рояль, духовые и струнные. Используем качественные микрофоны и помещения с правильной акустикой, чтобы сохранить натуральный тембр инструмента, но при этом получить «чистый» материал для сведения.",
     variant: "dark",
-    price: <span className="tariff-price font-heading font-black text-xl">от 45 000 ₽</span>,
+    price: <span className="tariff-price font-heading font-black text-xl">от 35 000 ₽</span>,
   },
 ];
 

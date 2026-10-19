@@ -428,3 +428,28 @@ body {
   cursor: pointer;
   transition: background-color 0.25s ease, color 0.25s ease;
 }
+
+/* Legal documents and booking acknowledgements */
+.legal-footer {
+  background: var(--color-studio-dark);
+  color: var(--color-studio-cream);
+  padding: 1.5rem max(1rem, calc((100% - 1200px) / 2));
+  font-size: .8rem;
+  line-height: 1.9;
+  overflow-wrap: anywhere;
+}
+.legal-footer a, .booking-consents a { text-decoration: underline; text-underline-offset: 3px; }
+.legal-footer a:hover, .booking-consents a:hover { color: var(--color-studio-teal); }
+.legal-footer a:focus-visible, .booking-consents a:focus-visible, .booking-consents input:focus-visible {
+  outline: 2px solid var(--color-studio-cream);
+  outline-offset: 4px;
+}
+.booking-consents { border: 0; padding: 0; margin: 0; min-width: 0; color: var(--color-studio-cream); }
+.booking-consents legend { font-size: .9rem; margin-bottom: .5rem; }
+.booking-consents-hint { font-size: .78rem; line-height: 1.5; margin: 0 0 .5rem; color: #c5d7d5; }
+.booking-consent { display: flex; gap: .65rem; align-items: flex-start; padding: .5rem 0; font-size: .85rem; line-height: 1.5; }
+.booking-consent input { width: 20px; height: 20px; flex-shrink: 0; margin-top: 2px; accent-color: var(--color-studio-teal); cursor: pointer; }
+.booking-consent label { cursor: pointer; }
+.booking-consents:disabled { opacity: .65; }
+.booking-consents:disabled input, .booking-consents:disabled label { cursor: wait; }
+.booking-consent-error { color: #fca5a5; font-size: .85rem; line-height: 1.5; margin: .5rem 0; }

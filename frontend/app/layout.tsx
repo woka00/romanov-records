@@ -2,6 +2,7 @@
 // Fonts loaded via @font-face in globals.css (next/font incompatible with Babel)
 import type { Metadata } from "next";
 import "./globals.css";
+import LegalFooter from "@/components/LegalFooter";
 import DevBrowserGuard from "@/components/DevBrowserGuard";
 
 const siteUrl = process.env.NEXT_PUBLIC_SITE_URL ?? "http://localhost:3000";
@@ -64,6 +65,7 @@ export default function RootLayout({
       <body style={{ position: "relative" }}>
         <div aria-hidden="true" className="site-background" />
         {children}
+        <LegalFooter />
       </body>
     </html>
   );
