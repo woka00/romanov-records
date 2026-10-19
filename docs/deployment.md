@@ -65,6 +65,26 @@ WHERE a.status <> 'cancelled'
 
 Resolve any returned records with studio staff before applying the constraint.
 
+## Frontend builds on small servers
+
+Production builds use Webpack, one static-generation worker, and a 256 MiB
+Node.js heap limit in the Docker builder stage. TypeScript validation remains
+enabled. The heap limit applies per Node process, not to the whole build; it is
+not inherited by the runtime image. Keep enough RAM available for the running
+application and PostgreSQL, and avoid concurrent builds on a small VPS.
+
+For a frontend-only release with no backend/API changes, build first and replace
+only the frontend after a successful build:
+
+```bash
+docker compose --progress plain build romanov-frontend &&
+docker compose up -d --no-deps --no-build romanov-frontend
+```
+
+A full release still follows the migration and backup checks above. An interrupted
+SSH session is not evidence of a TypeScript error: inspect the build exit status,
+container state, and host memory/kernel logs before retrying.
+
 ## Backup and restore
 
 Create an encrypted, access-controlled backup directory outside the repository.
